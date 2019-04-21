@@ -2,8 +2,12 @@
 #include "common.h"
 #include "vector2d.h"
 
-
+//Some typedef 
 typedef std::vector<Vector2d> SList;
+typedef int ID;
+typedef vector<ID> RLIst;
+typedef set<ID> RSet;
+
 
 class Basic_robot
 {
@@ -12,7 +16,6 @@ private:
 	const double SPEED = 3.0;
 	const double raPos[3] = { 0.0,2.09,4.19 };
 	int timeStep;
-	double left_speed, rightspeed;
 
 public:
 	//the webots robot
@@ -42,10 +45,6 @@ public:
 	//angle error(0.01 rad)
 	const double AngleError = 0.01;
 
-	typedef int ID;
-	typedef vector<ID> RLIst;
-	typedef set<ID> RSet;
-
 	typedef struct { ID r; Vector2d p; } MSG;
 
 	//init
@@ -54,16 +53,22 @@ public:
 	//name
 	string Name();
 
+	//ID
+	ID ID();
+
 	//position
 	Vector2d Position();
 
 	//direction
 	Vector2d Direction();
 
+	//move
+	void Move(double left_speed,double right_speed);
+
 	//forward
 	void Forward(double k);
 
-	//turn
+	//turn(turn left when k>0)
 	void Turn(double k);
 
 	//one step
@@ -80,6 +85,7 @@ public:
 
 	//surround robots (absolute position)
 	SList SurroundRobots_A();
+
 };
 
 

@@ -26,6 +26,12 @@ double Vector2d::operator*(Vector2d &v)
 	return z * v.z + x * v.x;
 }
 
+//cross(just return one signed value)
+double Vector2d::operator%(Vector2d &v)
+{
+	return z * v.x - x * v.z;
+}
+
 ostream &operator <<(ostream &s, Vector2d &v)
 {
 	s << "(" << v.z << ", " << v.x << ")";
@@ -52,6 +58,18 @@ Vector2d Vector2d::normalize()
 	return *this;
 }
 
+//rad
+double Vector2d::Rad()
+{
+	Vector2d z_axis(1.0, 0.0);
+
+	if (z_axis % (*this) >= 0)
+		return acos(z / norm());
+	else
+		return -acos(z / norm());
+
+}
+
 Vector2d Vector2d::rotate(double rad)
 {
 	double z_ = z * cos(rad) - x * sin(rad);
@@ -66,8 +84,27 @@ double Dist(Vector2d v1, Vector2d v2)
 	return (v1 - v2).norm();
 }
 
+
+double Rad(Vector2d v1, Vector2d v2)
+{
+	double rad = v2.Rad() - v1.Rad();
+
+	while (rad > PI)
+		rad -= 2 * PI;
+
+	while (rad <= -PI)
+		rad += 2 * PI;
+
+	return rad;
+}
+
+double Rad(Vector2d v1, Vector2d v2, Vector2d O)
+{
+	return Rad(v1 - O, v2 - O);
+}
+
 //cal the midpoint
-Vector2d Midpoint(Vector2d v1, Vector2d v2)
+Vector2d MidPoint(Vector2d v1, Vector2d v2)
 {
 	return (v1 + v2) * 0.5;
 }

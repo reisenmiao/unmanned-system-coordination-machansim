@@ -50,6 +50,12 @@ string Basic_robot::Name()
 	return robot->getName();
 }
 
+//ID
+int Basic_robot::ID()
+{
+	return Name()[1] - '0';
+}
+
 //position
 Vector2d Basic_robot::Position()
 {
@@ -64,18 +70,23 @@ Vector2d Basic_robot::Direction()
 	return Vector2d(-north[0], -north[2]).normalize();
 }
 
+//move
+void Basic_robot::Move(double left_speed, double right_speed)
+{
+	leftMotor->setVelocity(left_speed);
+	rightMotor->setVelocity(right_speed);
+}
+
 //forward
 void Basic_robot::Forward(double k)
 {
-	leftMotor->setVelocity(SPEED*k);
-	rightMotor->setVelocity(SPEED*k);
+	Move(SPEED*k,SPEED*k);
 }
 
 //turn
 void Basic_robot::Turn(double k)
 {
-	leftMotor->setVelocity(SPEED *k);
-	rightMotor->setVelocity(-SPEED*k);
+	Move(-SPEED *k,SPEED*k);
 }
 
 //one step
@@ -123,13 +134,14 @@ SList Basic_robot::SurroundRobots_R()
 
 		for (unsigned j = 0; j < Sr.size(); j++)
 
-			if ((pos - Sr[j]).norm() < DistError)	
+			if (Dist(pos, Sr[j]) < DistError)
 				flag = false;
 
 		if (flag)
 		{
 			Sr.push_back(pos);
 		}
+
 	}
 
 	//deal with the radar2
@@ -147,13 +159,14 @@ SList Basic_robot::SurroundRobots_R()
 
 		for (unsigned j = 0; j < Sr.size(); j++)
 
-			if ((pos - Sr[j]).norm() < DistError)
+			if (Dist(pos, Sr[j]) < DistError)
 				flag = false;
 
 		if (flag)
 		{
 			Sr.push_back(pos);
 		}
+
 	}
 
 	//deal with radar3
@@ -171,13 +184,14 @@ SList Basic_robot::SurroundRobots_R()
 
 		for (unsigned j = 0; j < Sr.size(); j++)
 
-			if ((pos - Sr[j]).norm() < DistError)
+			if (Dist(pos, Sr[j]) < DistError)
 				flag = false;
 
 		if (flag)
 		{
 			Sr.push_back(pos);
 		}
+
 	}
 
 	//print to debug
@@ -207,12 +221,13 @@ SList Basic_robot::SurroundRobots_A()
 	}
 
 	//print to debug
-	cout <<Name()<<": nearby robots  { ";
+	/*cout <<Name()<<": nearby robots  { ";
 	for (SList::iterator iter = Sa.begin(); iter != Sa.end(); iter++)
 	{
 		cout << *iter;
 	}
 	cout << "}" << endl;
+	*/
 	
 
 	return Sa;

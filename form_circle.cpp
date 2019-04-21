@@ -5,7 +5,7 @@
 // Modifications:
 
 #include "common.h"
-#include "basic_robot.h"
+#include "Intel_robot.h"
 
 
 
@@ -13,14 +13,17 @@
 
 int main(int argc, char **argv)
 {
-	Basic_robot robot;
-
-	while (robot.Step() != -1)
-	{	
-		robot.SurroundRobots_A();
+	Intel_robot robot;
+	
+	
+	
+	while (robot.Step()!=-1)
+	{
+		robot.CircleFormation();
+		robot.UniformTransformation();
 	}
 
-
+	
 	return 0;
 }
 
@@ -29,184 +32,7 @@ int main(int argc, char **argv)
 
 
 
-//
 
-
-//
-//
-//
-//
-//
-
-//
-
-//
-//void basicMovement(void)
-//{
-//	double d0 = us0->getValue();
-//	double d1 = us1->getValue();
-//
-//	if (d0 < 100 || d1 < 100)
-//	{
-//		leftMotor->setVelocity(-SPEED);
-//		rightMotor->setVelocity(SPEED);
-//	}
-//	else
-//	{
-//		leftMotor->setVelocity(SPEED);
-//		rightMotor->setVelocity(SPEED);
-//	}
-//}
-//
-////move to the target point
-//void PIDmovement(Pos amibition)
-//{
-//
-//	Pos p = getPosition();
-//	double ed = calDist(amibition, p);
-//	double ed_old = ed;
-//	double Ed = ed;
-//	double ed_dot = 0;
-//	if (ed > 0.01)
-//		forward(SPEED*0.01*ed);
-//
-//
-//	//use the PID control to reach
-//	double Kp = 1.0, Kd = 1.0, Ki = 0.1;
-//	while ((robot->step(timeStep) != -1) && ed > 0.05)
-//	{
-//		//calculate target direction
-//		double amibitionAngle = atan((amibition.x - p.x) / (amibition.z - p.z));
-//		if ((amibition.z - p.z) > 0)
-//			amibitionAngle += 3.14;
-//		amibitionAngle = modifyAzimuth(amibitionAngle);
-//		//std::cout << robot->getName() << ":" << "ambition angle" << amibitionAngle << std::endl;
-//
-//		//turn to the ambition angle
-//		double error = amibitionAngle - p.theta;
-//		double error_old = error;
-//		double E = error;
-//		double e_dot = 0;
-//		double turn_speed = 0;
-//		turn(SPEED*(-error));
-//
-//		//use PID_control to turn
-//		while ((robot->step(timeStep) != -1) && abs(error) > 0.5
-//			)
-//		{
-//			//refresh position message and error
-//			p = getPosition();
-//			error = amibitionAngle - p.theta;
-//
-//			e_dot = error - error_old;
-//			E = E + error;
-//
-//			turn_speed = 0.005*(Kp*error + Kd*e_dot + Ki*E);
-//			if (abs(turn_speed) > 10)
-//			{
-//				stop(1.0);
-//				forward(SPEED);
-//				step(1.0);
-//			}
-//
-//			turn(-turn_speed);
-//			error_old = error;
-//		}
-//
-//		//std::cout << robot->getName() << ": finish the turn" << std::endl;
-//		//reach the target
-//		p = getPosition();
-//		ed = calDist(amibition, p);
-//
-//		ed_dot = ed - ed_old;
-//		Ed = Ed + ed;
-//		forward(SPEED*0.2*(Kp*ed + Kd*ed_dot + Ki *Ed));
-//		ed_old = ed;
-//	}
-//
-//	//std::cout << robot->getName() << ": reach the ambition" << std::endl;
-//
-//
-//}
-//
-////move along the circle to the target
-////just do some adjustment to PIDmovement 
-//void moveAlongCirlce(Pos amibition,Pos O)
-//{
-//	Pos p = getPosition();
-//	double ed = calDist(amibition, p);
-//	double ed_old = ed;
-//	double Ed = ed;
-//	double ed_dot = 0;
-//	if (ed > 0.01)
-//		forward(SPEED*0.01*ed);
-//
-//
-//	//use the PID control to reach
-//	double Kp = 1.0, Kd = 1.0, Ki = 0.1;
-//	while ((robot->step(timeStep) != -1) && ed > 0.05)
-//	{
-//		
-//		//the rad of ray OPi
-//		double OPRad = getVectorRad(O, p);
-//		double OPRad_re = modifyAzimuth(OPRad + PI);
-//
-//		//the angle of ray OPtarget
-//		double OPtRad = getVectorRad(O, amibition);
-//
-//		double amibitionAngle;
-//		if (OPRad_re <= OPtRad && OPtRad <= OPRad)
-//			amibitionAngle = OPRad - PI / 2;
-//		else
-//			amibitionAngle = OPRad + PI / 2;
-//		std::cout << "ambition angle:" << amibitionAngle << std::endl;
-//
-//		//turn to the ambition angle
-//		double error = amibitionAngle - p.theta;
-//		double error_old = error;
-//		double E = error;
-//		double e_dot = 0;
-//		double turn_speed = 0;
-//		turn(SPEED*(-error));
-//
-//		//use PID_control to turn
-//		while ((robot->step(timeStep) != -1) && abs(error) > 0.5)
-//		{
-//			//refresh position message and error
-//			p = getPosition();
-//			error = amibitionAngle - p.theta;
-//
-//			e_dot = error - error_old;
-//			E = E + error;
-//
-//			turn_speed = 0.005*(Kp*error + Kd*e_dot + Ki*E);
-//			
-//			//random move to avoid some special pos
-//			if (abs(turn_speed) > 10)
-//			{
-//				stop(10.0);
-//				forward(SPEED);
-//				step(10.0);
-//			}
-//
-//			turn(-turn_speed);
-//			error_old = error;
-//		}
-//
-//		//std::cout << robot->getName() << ": finish the turn" << std::endl;
-//		//reach the target
-//		p = getPosition();
-//		ed = calDist(amibition, p);
-//
-//		ed_dot = ed - ed_old;
-//		Ed = Ed + ed;
-//		forward(SPEED*0.2*(Kp*ed + Kd*ed_dot + Ki *Ed));
-//		ed_old = ed;
-//	}
-//
-//	std::cout << robot->getName() << ": reach the ambition" << std::endl;
-//}
-//
 ////NetWork construction for each robot ri
 //RSet NetConstruct(ID id,SList Sr)
 //{
