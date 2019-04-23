@@ -3,11 +3,11 @@
 #include "vector2d.h"
 
 //Some typedef 
-typedef std::vector<Vector2d> SList;
+typedef vector<Vector2d> SList;
 typedef int ID;
+
 typedef vector<ID> RLIst;
 typedef set<ID> RSet;
-
 
 class Basic_robot
 {
@@ -44,8 +44,6 @@ public:
 	
 	//angle error(0.01 rad)
 	const double AngleError = 0.01;
-
-	typedef struct { ID r; Vector2d p; } MSG;
 
 	//init
 	Basic_robot();

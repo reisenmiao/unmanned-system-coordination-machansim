@@ -1,20 +1,29 @@
 #include "intel_robot.h"
 
 //init
-Intel_robot::Intel_robot(void)
+void Intel_robot::Initialization(void)
 {
+	N.clear();
+
+	conv.Top = -1;
+	conv_init = false;
+
+	for (int k = 0; k < K; k++)
+		for (int i = 0; i < L; i++)
+			x[k][i] = 0;
+
+	CardinalityEstimation();
+
 	AMOUNT = 4;
-	O = Vector2d(1.0, 1.25);
-	R = 0.6592;
+	O = Vector2d(0, 0);
+	R = 0.0;
 	d = 2 * PI / AMOUNT;
 
 }
 
 //NetWork construction for each robot ri
-RSet Intel_robot::NetConstruction(void)
+void Intel_robot::NetConstruction(void)
 {
-	//Neighborhood list 
-	RSet N;
 	Vector2d pos = Position();
 	
 	//abosulute position list
@@ -26,18 +35,15 @@ RSet Intel_robot::NetConstruction(void)
 	m.p = pos;
 	void *m_pt = &m;
 	emitter->send(m_pt, sizeof(MSG));
+	
+	//waiting 0.5s to receive message
+	Step(0.5);
 
 	while (receiver->getQueueLength() >0) 
 	{
 		//get the receive data
 		const MSG *Msgj = (MSG*)receiver->getData();
 		
-		//if receive the msg from itself,break this rountie
-	
-		//print Msg
-		//std::cout << "Reveive  : ( ID: " << Msgj->r << ", x:" << Msgj->p.x << ", z:" << Msgj->p.z << " )" << std::endl;
-
-
 		//draw the dircle
 		double diameter;
 		Vector2d center;
@@ -49,9 +55,14 @@ RSet Intel_robot::NetConstruction(void)
 
 			//search if any robot in circle
 			bool flag = true;
-			for (SList::iterator iter = Sa.begin();iter != Sa.end(); ++iter)
-				if (Dist(*iter, center) < diameter/2 - DistError)
+			for (SList::iterator iter = Sa.begin(); iter != Sa.end(); ++iter)
+			{
+				if (Dist(*iter, Msgj->p) < DistError)
+					continue;
+
+				if (Dist(*iter, center) < diameter / 2 + DistError)
 					flag = false;
+			}
 				
 			if (flag)
 				N.insert(Msgj->r);
@@ -61,35 +72,216 @@ RSet Intel_robot::NetConstruction(void)
 		receiver->nextPacket();
 	}
 	
-	//print to debug
+	//print ro debug
 	
-	std::cout << "Neighborhood : { ";
+	cout <<Name() << ": Neighborhood { ";
 	for (RSet::iterator it = N.begin(); it != N.end(); it++)
 	{
-		std::cout << *it << ", ";
+		cout << *it << ", ";
 	}
-	std::cout << "}" << std::endl;
+	cout << "}" << endl;
 	
-	return N;
-
+	
 }
 
 
 //Distribute convex hull Constrction for each robot ri
-void ConvexHullConstruction(void)
+void Intel_robot::ConvexHullConstruction(void)
 {
+	set<int> Fin;
+	vector<MSG2> msglist[16];
 
+	Conv temp;
+	while (Step() != -1)
+	{
+		if (!conv_init)
+		{
+			ConvexPoint point;
+			point.id = ID();
+			point.p = Position();
+
+			conv.points[++conv.Top] = point;
+
+			temp = conv;
+
+			MSG2 m;
+			m.r = ID();
+			m.conv = conv;
+			for (int k = 0; k < K; k++)
+				for (int i = 0; i < L; i++)
+					m.x[k][i] = x[k][i];
+
+			void *m_pt = &m;
+			emitter->send(m_pt, sizeof(MSG2));
+
+			//finished the initialization
+			conv_init = true;
+
+		}
+		else if (receiver->getQueueLength() > 0)
+		{
+			//receive the message
+			const MSG2 *Msgj = (MSG2*)receiver->getData();
+			if (N.find(Msgj->r) == N.end())
+				continue;
+			
+			if (Fin.find(Msgj->r) != Fin.end())
+			{
+				msglist[Msgj->r].push_back(*Msgj);
+			}
+			else
+			{
+				temp = ConvexHullMerge(temp, Msgj->conv);
+				for (int k = 0; k < K; k++)
+					for (int i = 0; i < L; i++)
+						x[k][i] = x[k][i] || Msgj->x[k][i];
+
+				Fin.insert(Msgj->r);
+
+				if (Fin.size() == N.size())
+				{
+					if (temp == conv)
+					{
+						cout << Name() << ": {";
+						for (int i = 0; i <= conv.Top; i++)
+							cout << conv.points[i].p;
+						cout << "}, (";
+						for (int k = 0; k < K; k++)
+						{
+							for (int i = 0; i < L; i++)
+								cout << x[k][i];
+							cout << ", ";
+						}
+						cout << " )" << endl;
+
+						MSG2 m;
+						m.r = ID();
+						m.conv = conv;
+						for (int k = 0; k < K; k++)
+							for (int i = 0; i < L; i++)
+								m.x[k][i] = x[k][i];
+
+						void *m_pt = &m;
+						emitter->send(m_pt, sizeof(MSG2));
+
+						return;
+					}
+
+					conv = temp;
+
+					MSG2 m;
+					m.r = ID();
+					m.conv = conv;
+					for (int k = 0; k < K; k++)
+						for (int i = 0; i < L; i++)
+							m.x[k][i] = x[k][i];
+
+					void *m_pt = &m;
+					emitter->send(m_pt, sizeof(MSG2));
+
+					Fin.clear();
+					for (RSet::iterator it = N.begin(); it != N.end(); it++)
+					{
+						if (!msglist[*it].empty())
+						{
+							Conv conv_k = msglist[*it].back().conv;
+							temp = ConvexHullMerge(conv, conv_k);
+							for (int k = 0; k < K; k++)
+								for (int i = 0; i < L; i++)
+									x[k][i] =x[k][i] || msglist[*it].back().x[k][i];
+
+							Fin.insert(*it);
+							msglist[*it].pop_back();
+						}
+					}
+
+				}
+			}
+
+			//pop the msg please!
+			receiver->nextPacket();
+		}
+
+	}
+
+	
+	
+	
 }
 
 //Distribute cardinality estimation for each robot ri
-void CardinalityEstimation(void)
+void Intel_robot::CardinalityEstimation(void)
 {
+	int r[L - 1];
 
+	srand((int)time(0) + ID());
+
+	for (int k = 0; k < K; k++)
+	{
+		int y = 0;
+
+		
+		for (int i = 0; i < L - 1; i++)
+			r[i] = rand() % 2;
+
+		for (int i = 0; i < L - 1; i++)
+		{
+			if (r[i] == 1)
+				break;
+			else
+				y++;
+		}
+
+		x[k][y] = 1;
+	}
 }
 
 //Determination of the center and radius of the cirle to be formed for each robot ri
-void Determination(void)
+void Intel_robot::Determination(void)
 {
+	int sum_y = 0;
+	for (int k = 0; k < K; k++)
+	{
+		int y = 0;
+		for (int i = 0; i < L; i++)
+		{
+			if (x[k][i] == 0)
+				break;
+			y++;
+		}
+		sum_y += y;
+	}
+	double p = 1.2897*pow(2, sum_y / K);
+
+	for (int i = 0; i <= conv.Top; i++)
+	{
+		Vector2d temp = conv.points[i].p*(1.0 / (conv.Top + 1.0));
+		O = O + temp;
+	}
+
+	double area = 0;
+	for (int i = 0; i < conv.Top; i++)
+	{
+		area += conv.points[i].p % conv.points[i + 1].p;
+	}
+	area += conv.points[conv.Top].p % conv.points[0].p;
+	area = fabs(area / 2.0);
+
+	double q = gamma * area / PI / size / size;
+	
+	double n = min(p, q);
+
+	R = size / sin(PI / n);
+
+	if (R > 0.70)
+	{
+		R = 0.70;
+	}
+	else if(R < 0.55)
+	{
+		R = 0.55;
+	}
+	cout << Name() << " O:" << O << ", R:" << R << endl;
 
 }
 
@@ -104,7 +296,7 @@ void Intel_robot::CircleFormation(void)
 }
 
 //Uniform transformation for each robot ri
-void Intel_robot::UniformTransformation(void)
+void  Intel_robot::UniformTransformation(void)
 {
 	Vector2d pos = Position();
 	SList Sa = SurroundRobots_A();	
@@ -112,17 +304,11 @@ void Intel_robot::UniformTransformation(void)
 	//find the most nearby robot clockwise and cal the d+
 	double minRad = -PI;
 	
-	if (Sa.size() < AMOUNT - 1)
-	{
-		cout << "Waiting: some robot don't reach the circle." << endl;
-		return;
-	}
-
 	for (SList::iterator it = Sa.begin(); it != Sa.end(); it++)
 	{
-		if (abs(Dist(*it, O) - R) > DistError)
+		if (fabs(Dist(*it, O) - R) > DistError)
 		{
-			cout << "Waiting: some robot don't reach the circle." << endl;
+			//cout << "Waiting: some robot don't reach the circle." << endl;
 			return;
 		}
 
@@ -134,69 +320,20 @@ void Intel_robot::UniformTransformation(void)
 	}
 
 	//print to debug
-	cout << Name() <<":Nearby Robots  : { ";
+	/*cout << Name() <<":Nearby Robots  : { ";
 	for (SList::iterator iter = Sa.begin(); iter != Sa.end(); iter++)
 	{
 		cout << "( " << Rad(pos,*iter,O) << " ), ";
 	}
 	cout << "} minRad:" << minRad << endl;
-
+	*/
 
 	//if d+ > d
-	if (abs(minRad) > d && abs(minRad+d)>AngleError)
+	if (abs(minRad) > d && fabs(minRad+d)>AngleError)
 	{
 		Vector2d target_circle = (pos - O).rotate(d + minRad);
 		Vector2d target = target_circle + O;
 		PIDForward(target);
 	}
-	//std::vector<double> SListRad;
 
-	//for (SList::iterator it = Sa.begin(); it != Sa.end(); it++)
-	//{
-	//		if (abs(calDist(O, *it) - R) > 0.05)
-			//{
-	//			//std::cout << "Waiting: some robot don't reach the circle." << std::endl;
-	//			return;
-	//		}
-	//		double temp_rad = getVectorRad(O, *it);
-	//		SListRad.push_back(temp_rad);
-	//	}
-	//	
-	//print to debug
-		//std::cout << "Nearby Robots  : { ";
-	//for (std::vector<double>::iterator iter = SListRad.begin(); iter != SListRad.end(); iter++)
-	//	{
-	//		std::cout << "( " << *iter << " ), ";
-	//}
-	//std::cout << "}" << std::endl;
-	//	
-	//
-	//	double minDist = 3*PI;
-	//	double self_rad = getVectorRad(O, p);
-	//	std::cout << robot->getName() << ": myPos: " << self_rad << std::endl;
-	//	for (std::vector<double>::iterator it = SListRad.begin(); it != SListRad.end(); it++)
-	//	{
-	//		double dist = modifyAzimuth(self_rad - *it);
-	//		while (dist < 0)
-	//			dist += 2 * PI;
-	//		while (dist > 2 * PI)
-	//			dist -= 2 * PI;
-	//		
-	//		if (dist < minDist)
-	//			minDist = dist;
-	//	}
-	//	
-	//	
-	//	//print to debug
-	//	std::cout << "Most neraby robot:" << modifyAzimuth(self_rad-minDist)  << std::endl;
-	//	//if d+ > d
-	//	if (minDist > d)
-	//	{
-	//		double targetRad = modifyAzimuth(self_rad + d - minDist) ;
-	//		Pos target;
-	//		target.x = R*sin(targetRad) + O.x;
-	//		target.z = R*cos(targetRad) + O.z;
-	//		std::cout <<robot->getName() <<"amibition:" << targetRad << std::endl;
-	//		PIDmovement(target);
-	//	}
 }

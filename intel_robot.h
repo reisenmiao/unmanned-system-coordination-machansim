@@ -1,21 +1,38 @@
 #pragma once
 #include "contr_robot.h"
 
+const int L = 5;
+const int K = 4;
 
 class Intel_robot :public Contr_robot
 {
 private:
-	int AMOUNT;
+	
+	RSet N;
+
+	Conv conv;
+	bool conv_init;
+
+	int x[K][L] = { 0 };
+
+	const double gamma = 1.5;
+	const double size = 0.5;
+
 	Vector2d O;
+	int AMOUNT;
 	double R;
 	double d;
 
+	typedef struct { int r; Vector2d p; } MSG;
+	typedef struct { int r; Conv conv; int x[K][L]; } MSG2;
+
 public:
-	//init
-	Intel_robot(void);
+
+	//initialization
+	void Initialization(void);
 
 	//NetWork construction for each robot ri
-	RSet NetConstruction(void);
+	void NetConstruction(void);
 
 	//Distribute convex hull Constrction for each robot ri
 	void ConvexHullConstruction(void);

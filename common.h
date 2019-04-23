@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <math.h>
+#include <time.h>
 #include <vector>
 #include <algorithm>
 #include <string>
