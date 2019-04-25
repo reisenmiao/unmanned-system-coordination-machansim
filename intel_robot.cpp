@@ -14,7 +14,7 @@ void Intel_robot::Initialization(void)
 
 	CardinalityEstimation();
 
-	AMOUNT = 4;
+	AMOUNT = 6;
 	O = Vector2d(0, 0);
 	R = 0.0;
 	d = 2 * PI / AMOUNT;
@@ -104,6 +104,7 @@ void Intel_robot::ConvexHullConstruction(void)
 
 			temp = conv;
 
+			//send msg
 			MSG2 m;
 			m.r = ID();
 			m.conv = conv;
@@ -122,9 +123,14 @@ void Intel_robot::ConvexHullConstruction(void)
 		{
 			//receive the message
 			const MSG2 *Msgj = (MSG2*)receiver->getData();
-			if (N.find(Msgj->r) == N.end())
-				continue;
 			
+			//if receive the message from robot which is not in N,ignore it 
+			if (N.find(Msgj->r) == N.end())
+			{
+				receiver->nextPacket();
+				continue;
+			}
+
 			if (Fin.find(Msgj->r) != Fin.end())
 			{
 				msglist[Msgj->r].push_back(*Msgj);
@@ -154,6 +160,7 @@ void Intel_robot::ConvexHullConstruction(void)
 						}
 						cout << " )" << endl;
 
+						//send msg
 						MSG2 m;
 						m.r = ID();
 						m.conv = conv;
@@ -169,6 +176,7 @@ void Intel_robot::ConvexHullConstruction(void)
 
 					conv = temp;
 
+					//send msg
 					MSG2 m;
 					m.r = ID();
 					m.conv = conv;
@@ -195,14 +203,16 @@ void Intel_robot::ConvexHullConstruction(void)
 						}
 					}
 
-				}
-			}
+				}//end if have received msg from all robots in N 
+
+			}//end deal with the msg
 
 			//pop the msg please!
 			receiver->nextPacket();
-		}
 
-	}
+		}//end if init or not
+
+	}//end while of ConvexHullConstruction
 
 	
 	
@@ -277,9 +287,9 @@ void Intel_robot::Determination(void)
 	{
 		R = 0.70;
 	}
-	else if(R < 0.55)
+	else if(R < 0.6)
 	{
-		R = 0.55;
+		R = 0.6;
 	}
 	cout << Name() << " O:" << O << ", R:" << R << endl;
 
@@ -306,11 +316,11 @@ void  Intel_robot::UniformTransformation(void)
 	
 	for (SList::iterator it = Sa.begin(); it != Sa.end(); it++)
 	{
-		if (fabs(Dist(*it, O) - R) > DistError)
-		{
-			//cout << "Waiting: some robot don't reach the circle." << endl;
-			return;
-		}
+		//if (fabs(Dist(*it, O) - R) > DistError)
+		//{
+			//cout<< Name() << ": Waiting: some robot don't reach the circle." << endl;
+			//return;
+		//}
 
 		double rad = Rad(pos, *it, O);
 
@@ -329,7 +339,7 @@ void  Intel_robot::UniformTransformation(void)
 	*/
 
 	//if d+ > d
-	if (abs(minRad) > d && fabs(minRad+d)>AngleError)
+	if (abs(minRad) > d && fabs(minRad+d)>2*AngleError)
 	{
 		Vector2d target_circle = (pos - O).rotate(d + minRad);
 		Vector2d target = target_circle + O;
